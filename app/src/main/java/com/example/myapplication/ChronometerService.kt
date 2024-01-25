@@ -82,10 +82,8 @@ class ChronometerService : Service() {
     }
 
     fun resetChronometer() {
-        if (!isRunning) {
-            startTime = 0L
-            stopSelf()
-        }
+        stopChronometer()
+        startChronometer()
     }
 
     private fun updateNotification() {

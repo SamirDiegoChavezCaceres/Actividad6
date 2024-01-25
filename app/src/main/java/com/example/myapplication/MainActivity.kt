@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private var isServiceBound = false
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
+    private lateinit var resetButton: Button
     private lateinit var timeElapsedTextView: TextView
     private val handler = Handler(Looper.getMainLooper())
     private var isUpdating = false
@@ -47,12 +48,13 @@ class MainActivity : AppCompatActivity() {
 
         startButton = findViewById(R.id.startButton)
         stopButton = findViewById(R.id.stopButton)
+        resetButton = findViewById(R.id.resetButton)
         timeElapsedTextView = findViewById(R.id.timeElapsedTextView)
 
         // Botones en la actividad
         startButton.setOnClickListener { startChronometer() }
         stopButton.setOnClickListener { stopChronometer() }
-
+        resetButton.setOnClickListener { resetChronometer() }
         // Conectar al servicio
         val serviceIntent = Intent(this, ChronometerService::class.java)
         bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE)
