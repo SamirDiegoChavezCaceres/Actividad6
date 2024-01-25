@@ -3,14 +3,12 @@ package com.example.myapplication
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.Handler
 import android.os.IBinder
-import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 
 class ChronometerService : Service() {
