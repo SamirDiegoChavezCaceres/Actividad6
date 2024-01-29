@@ -1,8 +1,8 @@
 package com.example.myapplication
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,15 +14,9 @@ import androidx.core.app.NotificationCompat
 class ChronometerService : Service() {
     private var isRunning = false
     private var startTime: Long = 0L
+    private var elapsedTime: Long = 0
     private val binder = LocalBinder()
     private val handler = Handler()
-
-    companion object {
-        const val ACTION_START = "com.example.myapplication.ChronometerService.START"
-        const val ACTION_STOP = "com.example.myapplication.ChronometerService.STOP"
-        const val ACTION_RESET = "com.example.myapplication.ChronometerService.RESET"
-    }
-
     inner class LocalBinder : Binder() {
         fun getService(): ChronometerService = this@ChronometerService
     }
@@ -32,44 +26,36 @@ class ChronometerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NotificationHelper.NOTIFICATION_ID, createNotification())
-        if (intent != null && intent.action != null) {
-            when (intent.action) {
-                ACTION_START -> startChronometer()
-                ACTION_STOP -> stopChronometer()
-                ACTION_RESET -> resetChronometer()
-            }
-        }
+
+        val notification = createNotification()
+        startForeground(NotificationHelper.NOTIFICATION_ID, notification)
         return START_NOT_STICKY
     }
 
     private fun createNotification(): Notification {
-        createNotificationChannel()
-
+        val pendingIntentStop = PendingIntent.getBroadcast(this,1,
+            Intent(this, ChronometerReceiver::class.java).putExtra("action","stop"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntentStart = PendingIntent.getBroadcast(this,2,
+            Intent(this, ChronometerReceiver::class.java).putExtra("action","start"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntentReset = PendingIntent.getBroadcast(this,3,
+            Intent(this, ChronometerReceiver::class.java).putExtra("action","reset"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, NotificationHelper.CHANNEL_ID)
             .setContentTitle("Cronómetro en ejecución")
             .setContentText("Tiempo transcurrido: ${getElapsedTime()}")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .addAction(0,"Iniciar",pendingIntentStart)
+            .addAction(0,"Reiniciar",pendingIntentReset)
+            .addAction(0,"Detener",pendingIntentStop)
             .build()
     }
 
-    private fun createNotificationChannel() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                NotificationHelper.CHANNEL_ID,
-                "Cronometer Channel",
-                NotificationManager.IMPORTANCE_LOW
-            )
-
-            val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
 
     fun startChronometer() {
         if (!isRunning) {
-            startTime = System.currentTimeMillis()
+            startTime = System.currentTimeMillis() - elapsedTime
             isRunning = true
             updateNotification()
         }
@@ -77,29 +63,35 @@ class ChronometerService : Service() {
 
     fun stopChronometer() {
         if (isRunning) {
+            elapsedTime = System.currentTimeMillis() - startTime
             isRunning = false
         }
     }
 
     fun resetChronometer() {
-        stopChronometer()
-        startChronometer()
+        startTime = System.currentTimeMillis()
+        isRunning = false
+        elapsedTime = 0
     }
 
     private fun updateNotification() {
         if (isRunning) {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             handler.postDelayed({
                 val notification = createNotification()
-//                notificationManager.notify(NotificationHelper.NOTIFICATION_ID, notification)
+                notificationManager.notify(NotificationHelper.NOTIFICATION_ID, notification)
                 updateNotification()
             }, 1000)
         }
     }
-
     fun getElapsedTime(): String {
-        val currentTime = System.currentTimeMillis()
-        val elapsedTime = currentTime - startTime
-        val seconds = (elapsedTime / 1000).toInt()
+        val currentTime = if (isRunning) {
+            System.currentTimeMillis() - startTime
+        } else {
+            elapsedTime
+        }
+
+        val seconds = (currentTime / 1000).toInt()
         val minutes = seconds / 60
         val remainingSeconds = seconds % 60
 
